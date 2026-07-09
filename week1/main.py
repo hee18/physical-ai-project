@@ -79,11 +79,11 @@ def show_webcam(cap):
         if not ret:
             break 
 
+        frame = cv2.flip(frame, 1)  # 1: 좌우 반전
         _, _, edges = preprocess(frame)
 
         prev_time, fps = calculate_fps(frame_times, prev_time)
 
-        frame = cv2.flip(frame, 1)  # 1: 좌우 반전
         draw_fps(frame, fps)
 
         combined = combine_frames(frame, to_bgr(edges))
