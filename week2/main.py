@@ -45,35 +45,24 @@ def find_objects(mask, MIN_AREA=500):  # mask -> objects / contour 검출 + 면�
      
     return objects
 
-def draw_detection():  # frame, objects -> frame / 바운딩 박스, 중심점, 좌표 표시
-    pass
+def draw_detection(frame, objects):  # frame, objects -> frame / 바운딩 박스, 중심점, 좌표 표시
+    for cx, cy, area, (x, y, w, h) in objects:
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
+        cv2.putText(frame, f"({cx}, {cy})", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2, cv2.LINE_AA)
 
-def detect():  # frame -> frame, mask, objects / 인식 전체 파이프라인
-    pass
+    return frame
 
-def combine_frames():  # frame, mask -> combinde / 원본 + Mask 합치기(과제 1과 동일 방식)
-    pass
+def detect(frame):  # frame -> frame, mask, objects / 인식 전체 파이프라인
+    mask = create_mask(frame)
+    objects = find_objects(mask)
+    frame = draw_detection(frame, objects)
 
-def draw_fps(frame, fps):
-    cv2.putText(frame, f"FPS: {fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+    for cx, cy, area, _ in objects:
+        print(f"중심 ({cx}, {cy}) | 면적: {area}")
 
-def to_grayscale(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    return gray
+    return frame, mask, objects
 
-def apply_blur(gray, ksize=(5, 5), sigma=0):
-    blurred = cv2.GaussianBlur(gray, ksize, sigma)
-    return blurred
-
-def detect_edges(blurred, threshold1=50, threshold2=150):
-    edges = cv2.Canny(blurred, threshold1, threshold2)
-    return edges
-
-def preprocess(frame):
-    gray = to_grayscale(frame)
-    blurred = apply_blur(gray)
-    edges = detect_edges(blurred)
-    return gray, blurred, edges
 
 def create_fps_deque(maxlen=30):
     return deque(maxlen=maxlen)
@@ -87,12 +76,15 @@ def calculate_fps(frame_times, prev_time):
     fps = 1 / avg_dt if avg_dt > 0 else 0
     return current_time, fps
 
-def to_bgr(edges):
-    edges_bgr = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
-    return edges_bgr
+def draw_fps(frame, fps):
+    cv2.putText(frame, f"FPS: {fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+    
+def to_bgr(mask):
+    mask_bgr = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+    return mask_bgr
 
-def combine_frames(frame, edges_bgr):
-    combined = np.hstack((frame, edges_bgr))
+def combine_frames(frame, mask_bgr):
+    combined = np.hstack((frame, mask_bgr))
     return combined
 
 def save_result(combined, filename="result.png"):
@@ -110,13 +102,12 @@ def show_webcam(cap):
             break 
 
         frame = cv2.flip(frame, 1)  # 1: 좌우 반전
-        _, _, edges = preprocess(frame)
-
+        frame, mask, objects = detect(frame)
         prev_time, fps = calculate_fps(frame_times, prev_time)
 
         draw_fps(frame, fps)
 
-        combined = combine_frames(frame, to_bgr(edges))
+        combined = combine_frames(frame, to_bgr(mask))
         cv2.imshow("Combined", combined)
 
         key = cv2.waitKey(1) & 0xFF
