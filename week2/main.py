@@ -4,6 +4,10 @@ from collections import deque
 import time
 import numpy as np
 
+LOWER_COLOR=np.array([100, 150, 50])
+UPPER_COLOR=np.array([130, 255, 255])
+MIN_AREA=500
+
 def start_webcam():
     cap = cv2.VideoCapture(0)
 
@@ -24,12 +28,12 @@ def start_webcam():
     
     return cap 
 
-def create_mask(frame, lower_color=np.array([100, 150, 50]), upper_color=np.array([130, 255, 255])):  # frame -> mask / HSV 변환 + 지정 색 마스킹
+def create_mask(frame, lower_color=LOWER_COLOR, upper_color=UPPER_COLOR):  # frame -> mask / HSV 변환 + 지정 색 마스킹
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, lower_color, upper_color)
     return mask
 
-def find_objects(mask, MIN_AREA=500):  # mask -> objects / contour 검출 + 면적 필터링
+def find_objects(mask, MIN_AREA=MIN_AREA):  # mask -> objects / contour 검출 + 면적 필터링
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     objects = []
@@ -41,7 +45,7 @@ def find_objects(mask, MIN_AREA=500):  # mask -> objects / contour 검출 + 면�
         x, y, w, h = cv2.boundingRect(contour)
         cx = x + w // 2
         cy = y + h // 2
-        objects.append(cx, cy, area, (x, y, w, h))
+        objects.append((cx, cy, area, (x, y, w, h)))
      
     return objects
 
@@ -102,7 +106,7 @@ def show_webcam(cap):
             break 
 
         frame = cv2.flip(frame, 1)  # 1: 좌우 반전
-        frame, mask, objects = detect(frame)
+        frame, mask, _ = detect(frame)
         prev_time, fps = calculate_fps(frame_times, prev_time)
 
         draw_fps(frame, fps)
